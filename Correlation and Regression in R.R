@@ -142,3 +142,76 @@ noise_summary <- noise %>%
 noise_summary %>%
   filter(abs(spurious_cor) > 0.2)
 #Q. Is this essential step in statistical analysis?
+
+
+#Chapter 3: Visualising linear models
+#The least squared regression line
+# Scatterplot with regression line
+ggplot(data = bdims, aes(x = hgt, y = wgt)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE)
+#se = standard error
+# Estimate optimal value of my_slope
+add_line(my_slope = 1)
+
+#the code of the function add_line
+#bdims_summary <- bdims %>%
+#  summarize(N = n(), r = cor(hgt, wgt),
+#            mean_hgt = mean(hgt), mean_wgt = mean(wgt),
+#            sd_hgt = sd(hgt), sd_wgt = sd(wgt)) %>%
+#  mutate(true_slope = r * sd_wgt / sd_hgt, 
+#         true_intercept = mean_wgt - true_slope * mean_hgt)
+#p <- ggplot(data = bdims, aes(x = hgt, y = wgt)) + 
+#  geom_point() + 
+#  geom_point(data = bdims_summary, 
+#             aes(x = mean_hgt, y = mean_wgt), 
+#             color = "red", size = 3)
+#
+#my_data <- bdims_summary %>%
+#  mutate(my_slope = my_slope, 
+#         my_intercept = mean_wgt - my_slope * mean_hgt)
+#p + geom_abline(data = my_data, 
+#                aes(intercept = my_intercept, slope = my_slope), color = "dodgerblue")
+#}
+
+#Check list
+#1. the basic formula of a regression model
+#2. Fitted Values
+#3. Residuals (1 - 2)
+#4. Key concepts below:
+#Y-hat = expected value corresponding to Y
+#Beta-hats = estimates of true, unknown hats
+#Residuals (e's) are estimates of true, unknown epsilons
+#"Error" is rather like 'Noise'
+
+p = 64.594 - 0.591 * h
+h = 92.4
+
+# Print bdims_summary
+bdims_summary
+# Add slope and intercept
+bdims_summary %>%
+  mutate(slope = r * sd_wgt / sd_hgt, 
+         intercept = mean_wgt - slope * mean_hgt)
+#check
+#how to get intercept
+
+#Regression to the mean (check)
+# Height of children vs. height of father
+ggplot(data = Galton_men, aes(x = father, y = height)) +
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) + 
+  geom_smooth(method = "lm", se = FALSE)
+# Height of children vs. height of mother
+ggplot(data = Galton_women, aes(x = mother, y = height)) +
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) + 
+  geom_smooth(method = "lm", se = FALSE)
+#Conclusion:
+#Because of regression to the mean, an outstanding basketball player is likely
+#to have sons that are good at basketball, but not as good as him.
+
+
+
+#Chapter 4
+#Interpretation of Regression
