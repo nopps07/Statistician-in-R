@@ -215,3 +215,59 @@ ggplot(data = Galton_women, aes(x = mother, y = height)) +
 
 #Chapter 4
 #Interpretation of Regression
+
+#What you should avoid
+#1.Implying that the regression model establishes a cause-and-effect relationship
+#2.Switching the rold of the response and explanatory variables
+#3.Confusing percentage change with percentage point change.
+# Linear model for weight as a function of height
+lm(wgt ~ hgt, data = bdims)
+# Linear model for SLG as a function of OBP
+lm(SLG ~ OBP, data = mlbBat10)
+# Log-linear model for body weight as a function of brain weight
+lm(log(BodyWt) ~ log(BrainWt), data = mammals)
+
+#fitted.values
+#it returns a vector containing the Y hat values for each data point.
+#each fitted value generates a residual.
+#Understand the below
+mod <- lm(wgt ~ hgt, data = bdims)
+# Show the coefficients
+coef(mod)
+# Show the full output
+summary(mod)
+# Mean of weights equal to mean of fitted values?
+mean(bdims$wgt) == mean(fitted.values(mod))
+# Mean of the residuals
+mean(residuals(mod))
+
+#Tidying your linear model
+# Load broom
+library(broom)
+# Create bdims_tidy
+bdims_tidy <- augment(mod)
+# Glimpse the resulting data frame
+glimpse(bdims_tidy)
+# Check
+# Practice to grasp the info of 'augment'
+
+# Visualise new observations
+isrs <- broom::augment(mod, newdata = new_data)
+ggplot(data = textbooks, aes(x = amazNew, y = unlaNew)) +
+  geom_point() + geom_smooth(method = "lm") +
+  geom_point(data = isrs, aes(y = .fitted), size = 3, color = "red")
+# Print ben
+ben
+# Predict the weight of ben
+predict(mod, newdata = ben)
+# Note: mod라는 regression model 이 있고, observation 'Ben' 에 대응하는 예측값을 predict로 추출이 가능하다
+# Add the line to the scatterplot
+ggplot(data = bdims, aes(x = hgt, y = wgt)) + 
+  geom_point() + 
+  geom_abline(data = coefs, 
+              aes(intercept = `(Intercept)`, slope = hgt),  
+              color = "dodgerblue")
+
+
+#Chapter 5
+#Assessing Model Fit
