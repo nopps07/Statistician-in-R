@@ -271,3 +271,105 @@ ggplot(data = bdims, aes(x = hgt, y = wgt)) +
 
 #Chapter 5
 #Assessing Model Fit
+#Found the line that minimises the sum of the squared residuals.
+#Function
+library(broom)
+mod_possum <- lm(totalL ~ tailL, data = possum)
+mod_possum %>%
+  augment() %>%
+  summarise(SSE = sum(.resid^2),
+            SSE_also = (n() - 1) * var(.resid))
+#the root mean squared error, RMSE
+
+#Note:
+#The residual standard error reported that the regression model
+#for poverty rate of U.S. countries in terms of high school
+#graduation rate is 4.67. What does it mean?
+#Answer:
+#The typical difference between the observed poverty rate
+#and the poverty rate predicted by the model is about
+#4.67 percentage points!!. (not %)
+#Check:
+#understand 'to make this estimate unbiased'*
+
+# Compute the mean of the residuals
+mean(residuals(mod))
+# Compute RMSE
+sqrt(sum(residuals(mod)^2) / df.residual(mod))
+
+#Null(average) model
+#For all observations... Y-hat is equal to Y-average
+
+#Coefficient of determination
+
+# Manually
+# Compute R-squared
+bdims_tidy %>%
+  summarize(var_y = var(wgt), var_e = var(.resid)) %>%
+  mutate(R_squared = 1 - (var_e / var_y))
+#lm(A ~ B)
+#R^2 = 0.515 meaning that 51.4% of the variability in A
+#is explained by B
+
+# Compute SSE for null model
+mod_null %>%
+  summarize(SSE = sum(.resid^2))
+# Compute SSE for regression model
+mod_hgt %>%
+  summarize(SSE = sum(.resid^2))
+
+
+#Unusual points: leverage, Influence
+#leverage computations:
+mod <- lm(HR ~ SB, data = regulars)
+mod %>%
+  augment() %<%
+  arrange(desc(.hat)) %>%
+  select(HR, SB, .fitted, .resid, .hat) %>%
+  head()
+#OBservations of high leverage, by virtue of their
+#extreme values of the explanatory variable,
+#may or may not have a considerable effect on the slope of the model
+
+#But
+#'Infuential' is the opposite
+
+#Influence via Cock's distance
+mod <- lm(HR ~ SB, data = regulars_plus)
+mod %>%
+  augment() %>%
+  arrange(desc(.cooked)) %>%
+  select(HB, SB, .fitted, .resid, .hat, .cooked) %>%
+  head()
+#Higher .cooksd the more influence it has.
+
+
+
+#Dealing with Outliers
+#Note:
+#Anytime you are thinking about removing outliers,
+#Q1. you should ask yourself what the justification is
+#'Bc it improves my results' is not a good justification.
+#Q2. how does the scope of inference change?
+#For instance, if you have no scientific reason to exclude specific variables... be skeptical!!
+#A desire to have a hiher R^2 is not a good enough reason!
+
+# Create nontrivial_players
+nontrivial_players <- mlbBat10 %>%
+  filter(AB >= 10 & OBP < 0.500)
+# Fit model to new data
+mod_cleaner <- lm(SLG ~ OBP, data = nontrivial_players)
+# View model summary
+summary(mod_cleaner)
+summary(mod)
+# Visualize new model
+ggplot(nontrivial_players, aes(x = OBP, y = SLG)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+# Rank high leverage points
+mod %>%
+  augment() %>%
+  arrange(desc(.hat), .cooksd) %>%
+  head()
+
