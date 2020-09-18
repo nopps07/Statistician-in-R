@@ -66,6 +66,7 @@ ggplot(click_data_sum, aes(x = `week(visit_date)`,
 
 install.packages("powerMediation")
 library(powerMediation)
+?SSizeLogisticBin
 total_sample_size <- SSizeLogisticBin(p1 = 0.2,
                                       p2 = 0.3,
                                       B = 0.5,
@@ -91,3 +92,166 @@ total_sample_size <- SSizeLogisticBin(p1 = 0.54,
                                       power = 0.8)
 #3058 (about 1543 per group), which is much more than 10%
 
+
+
+###Chapter 2
+## Analyzing results
+library(broom)
+
+experiment_data <- read_csv("experiment_data.csv")
+
+experiment_data_sum <- experiment_data %>%
+  group_by(visit_date, condition) %>%
+  summarize(conversion_rate = mean(clicked_adopt_today))
+
+ggplot(experiment_data_sum,
+       aes(x = visit_date,
+           y = conversion_rate,
+           color = condition,
+           group = condition)) +
+  geom_point() +
+  geom_line()
+
+glm(clicked_adopt_today ~ #dependent
+      condition,#independent
+    family = "binomial",
+    data = experiment_data
+) %>%
+  tidy()
+#To define whether the test succeeds 
+
+
+# Group and summarize data
+experiment_data_clean_sum <- experiment_data_clean %>%
+  group_by(condition, visit_date) %>%
+  summarize(conversion_rate = mean(clicked_adopt_today))
+# Make plot of conversion rates over time
+ggplot(experiment_data_clean_sum,
+       aes(x = visit_date,
+           y = conversion_rate,
+           color = condition,
+           group = condition)) +
+  geom_point() +
+  geom_line()
+
+?glm
+#family:
+#a description of the error distribution and link function to be used in the model.
+
+# View summary of results
+experiment_data_clean %>%
+  group_by(condition) %>%
+  summarize(conversion_rate = mean(clicked_adopt_today))
+
+# Run logistic regression
+experiment_results <- glm(clicked_adopt_today ~ condition,
+                          family = "binomial",
+                          data = experiment_data_clean) %>%
+  tidy()
+
+
+## Designing follow-up experiments
+#  Tips for designing a new experiment
+#1. Build several small follow-up experiments
+#2. Avoid 'confounding variables'
+#3. Test small changes
+#Be specific! must be able to pick what variable is different
+
+# Run logistic regression power analysis
+total_sample_size <- SSizeLogisticBin(p1 = 0.39,
+                                      p2 = 0.59,
+                                      B = 0.5,
+                                      alpha = 0.05,
+                                      power = 0.8)
+#Kitten...! the number of samples you need if you wanna see efficient results
+
+# Another case (kitten)
+# Read in data for follow-up experiment
+followup_experiment_data <- read_csv("followup_experiment_data.csv")
+# View conversion rates by condition
+followup_experiment_data %>%
+  group_by(condition) %>%
+  summarise(conversion_rate = mean(clicked_adopt_today))
+# Run logistic regression
+followup_experiment_results <- glm(clicked_adopt_today ~ condition,
+                                   family = "binomial",
+                                   data = followup_experiment_data) %>%
+  tidy()
+# P.value > 0.05 -> kittens aren't actually that desirable?
+# or because we went in with bad assumptions?
+# we need to take into account the meaning of 'control' in any tests!
+
+
+#New column
+eight_month_checkin_data_sum <- eight_month_checkin_data %>%
+  mutate(month_text = month(visit_date, label = TRUE)) %>% #making new column
+  group_by(month_text, condition) %>%
+  summarise(conversion_rate = mean(clicked_adopt_today))
+
+#plot
+ggplot(eight_month_checkin_data_sum, aes(x = month_text, y = conversion_rate,
+                                         color = condition, group = condition)) +
+  geom_point() +
+  geom_line()
+
+#Plot Styling 1
+ggplot(eight_month_checkin_data_sum, aes(x = month_text, y = conversion_rate,
+                                         color = condition, group = condition)) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1),
+                     labels = percent) +
+  labs(x = "Month",
+       y = "Conversion Rate")
+
+#Plot Styling 2
+ggplot(eight_month_checkin_data_sum, aes(x = month_text, y = conversion_rate,
+                                         color = condition, group = condition)) +
+  geom_point(size = 4) + #dots get larger
+  geom_line(lwd = 1) + #lines get thicker
+  scale_y_continuous(limits = c(0, 1),
+                     labels = percent) +
+  labs(x = "Month",
+       y = "Conversion Rate")
+
+#Follow-up experiment assumptions
+eight_month_checkin_data_sum <- eight_month_checkin_data %>%
+  mutate(month_text = month(visit_date, label = TRUE)) %>%
+  group_by(month_text, condition) %>%
+  summarise(conversion_rate = mean(clicked_adopt_today))
+
+eight_month_checkin_data_diff <- eight_month_checkin_data_sum %>%
+  spread(condition, conversion_rate) %>%
+  mutate(condition_diff = cat_hat - no_hat)
+
+mean(eight_month_checkin_data_diff$condition_diff)
+sd(eight_month_checkin_data_diff$condition_diff)
+
+# Compute difference over time
+no_hat_data_diff <- no_hat_data_sum %>%
+  spread(year, conversion_rate) %>%
+  mutate(year_diff = `2018` - `2017`)
+no_hat_data_diff
+
+# Compute summary statistics
+mean(no_hat_data_diff$year_diff, na.rm = TRUE)
+sd(no_hat_data_diff$year_diff, na.rm = TRUE)
+
+# Run power analysis for logistic regression
+total_sample_size <- SSizeLogisticBin(p1 = 0.49,
+                                      p2 = 0.64,
+                                      B = 0.5,
+                                      alpha = 0.05,
+                                      power = 0.8)
+#must understand p1 and p2
+
+# View summary of data
+followup_experiment_data_sep %>%
+  group_by(condition) %>%
+  summarise(conversion_rate = mean(clicked_adopt_today))
+
+# Run logistic regression
+followup_experiment_sep_results <- glm(clicked_adopt_today ~ condition,
+                                       family = "binomial",
+                                       data = followup_experiment_data_sep) %>%
+  tidy()
