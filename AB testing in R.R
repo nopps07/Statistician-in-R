@@ -371,3 +371,145 @@ ggplot(viz_website_2018_03_sum,
   geom_line() +
   geom_vline(xintercept = as.numeric(as.Date("2018-03-15"))) +
   scale_y_continuous(limits = c(0, 0.3), labels = percent)
+
+
+## Chapter 4
+
+# power analyses 
+
+# Load package to run power analysis
+library(powerMediation)
+
+# Run power analysis for logistic regression
+total_sample_size <- SSizeLogisticBin(p1 = 0.17,
+                                      p2 = 0.27,
+                                      B = 0.5,
+                                      alpha = 0.05,
+                                      power = 0.8)
+total_sample_size
+
+install.packages("pwr")
+library(pwr)
+
+?pwr.t.test
+#type refers to number and type of samples
+#alternative to hypothesis
+
+# Run power analysis for t-test
+sample_size <- pwr.t.test(d = 0.3,
+                          sig.level = 0.05,
+                          power = 0.8)
+sample_size
+
+
+# Statistical Tests
+# Logistic regression: a binary (categorical) dependent variable (cliked or didn't)
+# T-test (linear regression) - a continuous dependent variable (e.g., time spent on website)
+
+# Run logistic regression
+ab_experiment_results <- glm(clicked_like ~ condition,
+                             family = "binomial",
+                             data = viz_website_2018_04) %>%
+  tidy()
+
+#Intepretation?
+#Not in the direction we wanted.
+#looks like 'Tools' actually had lower 'like' click rates than 'Tips'
+
+# Run t-test
+ab_experiment_results <- t.test(time_spent_homepage_sec ~ condition,
+                                data = viz_website_2018_04)
+ab_experiment_results
+
+
+# Stopping rules and Sequential Analysis
+# Stopping rules:
+# Procedures that allow interim analyses in clinical trials at predefined times,
+# while preserving the type I error at some pre-specifed level.
+# Sequential Analysis:
+# A procedure in which a statistical test of significance is conducted repeatedly
+# over time as the data are collected.
+# After each observation, the cumulative data are analysed and one of the following three decisions taken:
+# 1. stop the data collection, reject N0 and claim statistical significance
+# 2. stop the data collection, do not reject N0 and state that the results are not statistically significant
+# 3. continue the data collection, since as yet the cumulated data are inadequate to draw a conclusion.
+
+# Why stopping rules are usefl
+# Prevent p-hacking
+# Accounts for unsure effect size.
+# Allows for better allocation of resources
+
+# 분석과정에서 통계적으로 유의미한 결과값을 얻을 수 있는
+# 데이터의 개수를 매번 정확하게 수집하기 힘들기 때문에 쓰는거네.
+
+install.packages("gsDesign")
+library(gsDesign)
+
+# P-value cutoff???
+# Run sequential analysis
+seq_analysis_3looks <- gsDesign(k = 3,
+                                test.type = 1,
+                                alpha = 0.05,
+                                beta = 0.2,
+                                sfu = "Pocock")
+
+# Fill in max number of points and compute points per group and find stopping points
+max_n <- 3000
+max_n_per_group <- max_n / 2
+stopping_points <- max_n_per_group * seq_analysis_3looks$timing
+stopping_points
+
+
+# Multivariate Testing
+# Sometimes the goal of an experiment is to see how two different changes might affect each other.
+# Watch this video again in order to understand the result of multivariate analyses in R
+# *Baseline values - use factor() to avoid confusion
+
+multivar_results <- check %>%
+  mutate(one = factor(one,
+                      levels = c("Gunho", "Lee"))) %>%
+  mutate(two = factor(two,
+                      levels = c("Korean", "Asia"))) %<%
+  lm(dependent ~ one * two,
+     data = .) %>%
+  tidy()
+
+str(viz_website_2018_05)
+# Compute summary values for four conditions
+viz_website_2018_05_sum <- viz_website_2018_05 %>%
+  group_by(word_one, word_two) %>%
+  summarize(mean_time_spent_homepage_sec = mean(time_spent_homepage_sec))
+
+head(viz_website_2018_05_sum)
+# Plot summary values for four conditions
+ggplot(viz_website_2018_05_sum,
+       aes(x = word_one,
+           y = mean_time_spent_homepage_sec,
+           fill = word_two)) +
+  geom_bar(stat = "identity", position = "dodge")
+
+# Compute summary values for four conditions
+viz_website_2018_05_sum <- viz_website_2018_05 %>%
+  group_by(word_one, word_two) %>%
+  summarize(like_conversion_rate = mean(clicked_like))
+
+# Plot summary values for four conditions
+ggplot(viz_website_2018_05_sum,
+       aes(x = word_one,
+           y = like_conversion_rate,
+           fill = word_two)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_y_continuous(limits = c(0, 1), labels = percent)
+
+# Organize variables and run logistic regression
+viz_website_2018_05_like_results <- viz_website_2018_05 %>%
+  mutate(word_one = factor(word_one,
+                           levels = c("tips", "tools"))) %>%
+  mutate(word_two = factor(word_two,
+                           levels = c("better", "amazing"))) %>%
+  glm(clicked_like ~ word_one * word_two,
+      family = "binomial",
+      data = .) %>%
+  tidy()
+viz_website_2018_05_like_results
+# How to interpret them
