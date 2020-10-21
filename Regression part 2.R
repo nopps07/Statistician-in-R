@@ -1,4 +1,8 @@
 library(ggplot2)
+library(plotly)
+library(dplyr)
+library(broom)
+
 
 #Two paralel lines
 #Two categorical variables. Different intercepts
@@ -8,7 +12,7 @@ mod
 
 str(mpg)
 
-library(broom)
+
 augmod <- augment(mod)
 glimpse(augmod)
 str(augmod)
@@ -104,4 +108,54 @@ lm(totalPr ~ duration, data = mario_kart)
 slr + aes(color = cond)
 
 
+
+## Adding a numerical explanatory variable
+# Tiling the plan
+grid <- babies %>%
+  data_grid(
+    gestation = seq_range(gestation, by = 1),
+    age = seq_range(age, by = 1)
+  )
+mod <- lm(bwt ~ gestation + age, data = babies)
+bwt_hats <- augment(mod, newdata = grid)
+
+data_space +
+  geom_tile(data = bwt_hats, aes(fill = .fitted, alpha = 0.5)) +
+  scale_fill_continuous("bwt", limits = range(babies$bwt))
+
+#3D visualization
+plot_ly(data = babies, z = ~bwt, x = ~gestation, y = ~age, opacity = 0.6) %>%
+  add_markers(text = ~case, marker = list(size = 2)) %>%
+  add_surface(x = ~x, y = ~y, z = ~plane, showscale = FALSE,
+              cmax = 1, surfacecolor = color1, colorscale = col1)
+
+# add predictions to grid
+price_hats <- augment(mod, newdata = grid)
+
+# tile the plane
+data_space + 
+  geom_tile(data = price_hats, aes(fill = .fitted), alpha = 0.5)
+
+
+# draw the 3D scatterplot
+p <- plot_ly(data = mario_kart, z = ~totalPr, x = ~duration, y = ~startPr, opacity = 0.6) %>%
+  add_markers() 
+
+# draw the plane
+p %>%
+  add_surface(x = ~x, y = ~y, z = ~plane, showscale = FALSE)
+
+
+#Mtcars
+m <- plot_ly(data = mtcars, z = ~mpg, x = ~cyl, y = ~wt, opacity = 0.6) %>%
+  add_markers()
+
+m %>%
+  add_surface(x = ~x, y = ~y, z = ~plane, showscale = FALSE)
+
+
+## Conditional interpretation of coefficients
+
+#Important notes:
+#In multiple regression model, be sure to always include a phrase to the effect of "holding x constant'
 
