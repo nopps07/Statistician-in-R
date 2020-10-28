@@ -159,3 +159,24 @@ m %>%
 #Important notes:
 #In multiple regression model, be sure to always include a phrase to the effect of "holding x constant'
 
+
+#Geometry
+#1 num + 1 cat: parallel lines
+# 2 num: a plane
+#2 num + 1 cat: parallel planes
+
+#sample 3d model
+plot_ly(data = babies, z = ~bwt, x = ~gestation, y = ~age, opacitiy = 0.6) %>%
+  add_markers(color = ~factor(smoke), text = ~case, marker = list(size = 2)) %>%
+  add_surface(x = ~x, y = ~y, z = ~plane0, showscale =FALSE,
+              cmin = 0, cmax = 1, surfacecolor = color1, colorscale = col1) %>%
+  add_surface(x = ~x, y = ~y, z = ~plane1, showscale =FALSE,
+              cmin = 0, cmax = 1, surfacecolor = color2, colorscale = col1)
+
+
+#the dot operator 
+#meaning 'all other variables in the data'
+
+#Be careful with the exception
+#. - case : "all variables except for the one named case"
+
