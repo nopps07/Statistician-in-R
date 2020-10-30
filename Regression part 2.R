@@ -2,7 +2,7 @@ library(ggplot2)
 library(plotly)
 library(dplyr)
 library(broom)
-
+library(readr)
 
 #Two paralel lines
 #Two categorical variables. Different intercepts
@@ -347,3 +347,49 @@ new_data <- data.frame(GPA = 3.51)
 
 # make predictions
 augment(mod, newdata = new_data, type.predict = "response")
+
+nyc <- read_csv("https://assets.datacamp.com/production/repositories/845/datasets/639a7a3f9020edb51bcbc4bfdb7b71cbd8b9a70e/nyc.csv")
+str(nyc)
+pairs(nyc)
+
+# Price by Food plot
+ggplot(nyc, aes(x = Food, y = Price)) +
+  geom_point()
+
+# Price by Food model
+lm(Price ~ Food, data = nyc)
+
+nyc %>%
+  group_by(East) %>%
+  summarize(mean_price = mean(Price))
+
+lm(Price ~ Food + East, data = nyc)
+
+# fit model
+lm(Price ~ Food + Service, nyc)
+
+# draw 3D scatterplot
+p <- plot_ly(data = nyc, z = ~Price, x = ~Food, y = ~Service, opacity = 0.6) %>%
+  add_markers() 
+
+# draw a plane
+p %>%
+  add_surface(x = ~x, y = ~y, z = ~plane, showscale = FALSE) 
+
+
+# Collinearity
+nyc %>%
+  mutate(Price_cents = Price / 100) %>%
+  summarize(cor_collinear = cor(Price, Price_cents))
+#Multicollinearity?
+
+
+# draw 3D scatterplot
+p <- plot_ly(data = nyc, z = ~Price, x = ~Food, y = ~Service, opacity = 0.6) %>%
+  add_markers(color = ~factor(East)) 
+
+# draw two planes
+p %>%
+  add_surface(x = ~x, y = ~y, z = ~plane0, showscale = FALSE) %>%
+  add_surface(x = ~x, y = ~y, z = ~plane1, showscale = FALSE)
+
