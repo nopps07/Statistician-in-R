@@ -180,3 +180,170 @@ plot_ly(data = babies, z = ~bwt, x = ~gestation, y = ~age, opacitiy = 0.6) %>%
 #Be careful with the exception
 #. - case : "all variables except for the one named case"
 
+
+
+# Ch4 : what is logistic regression?
+ggplot(data = heartTr, aes(x = age, y = survived)) +
+  geom_jitter(width = 0, height = 0.05, alpha = 0.5)
+
+#making a binary variable
+heartTr <- heartTr %>%
+  mutate(is_alive = ifelse(survived == "alive", 1, 0))
+
+data_space <- ggplot(data = heartTr, aes(x= age, y = is_alive)) +
+  geom_jitter(width = 0, height = 0.05, alpha = 0.5)
+
+data_space +
+  geom_smooth(method = "lm", se = FALSE)
+
+#Generalised linear models
+glm(is_alive ~ age, data = heartTr, family = binomial)
+
+# filter
+MedGPA_middle <- MedGPA %>%
+  filter(GPA >= 3.375, GPA <= 3.770)
+
+# scatterplot with jitter
+data_space <- ggplot(data = MedGPA_middle, aes(y = Acceptance, x = GPA)) + 
+  geom_jitter(width = 0, height = 0.05, alpha = 0.5)
+
+# linear regression line
+data_space + 
+  geom_smooth(method = "lm", se = FALSE)
+
+# fit model
+glm(Acceptance ~ GPA, data = MedGPA, family = binomial)
+
+#Using bins
+
+# scatterplot with jitter
+data_space <- ggplot(data = MedGPA, aes(y = Acceptance, x = GPA)) + 
+  geom_jitter(width = 0, height = 0.05, alpha = 0.5)
+
+# add logistic curve
+data_space +
+  geom_smooth(method = "glm", se = FALSE, method.args = list(family = "binomial"))
+
+#geom_smooth(method = "glm", method.args = binomial, se = FALSE)
+
+
+# binned points and line
+data_space <- ggplot(data = MedGPA_binned, aes(x = mean_GPA, y = acceptance_rate)) + 
+  geom_point() + geom_line()
+
+# augmented model
+MedGPA_plus <- mod %>%
+  augment(type.predict = "response")
+
+# logistic model on probability scale
+data_space +
+  geom_line(data = MedGPA_plus, aes(x = GPA, y = .fitted), color = "red")
+
+
+#Probability scale
+heartTr_plus <- mod %>%
+  augment(type.predict = "response") %>%
+  mutate(y_hat = .fitted)
+#Probabiliy scale plot
+ggplot(date , aes(x = x1, y = y1)) +
+  geom_point() + geom_line() +
+  scale_y_continuous("Y name", limits = c(0, 1))
+
+#Odds scale
+heartTr_plus <- heartTr_plus %>%
+  mutate(odds_hat = y_hat / (1 - y_hat))
+#Odds scale plot
+ggplot(data, aes(x = x1, y = y1)) +
+  geom_point() + geom_line() +
+  scale_y_continuous("Y name")
+
+#log-odds scale
+heartTr_plus <- heartTr_plus %>%
+  mutate(log_odds_hat = log(odds_hat))
+
+#Comparison
+#Probability scale
+#scale: intuitive, easy to interpret
+#function: non-liner, hard to interpret
+
+#odds scale
+#scale: harder to interpret
+#function: exponential, harder to interpret
+
+#log-odds scale
+#scale: impossible to interpret
+#function: linear, easy to interpret
+
+#odds ratios
+exp(coef(mod))
+#0.94
+#each additional year of age is associated with a 6% decrease in the odds of survival
+
+
+# compute odds for bins
+MedGPA_binned <- MedGPA_binned %>%
+  mutate(odds = acceptance_rate / (1 - acceptance_rate))
+
+# plot binned odds
+data_space <- ggplot(data = MedGPA_binned, aes(x = mean_GPA, y = odds)) + 
+  geom_point() + geom_line()
+
+# compute odds for observations
+MedGPA_plus <- MedGPA_plus %>%
+  mutate(odds_hat = .fitted / (1 - .fitted))
+
+# logistic model on odds scale
+data_space +
+  geom_line(data = MedGPA_plus, aes(x = GPA, y = odds_hat), color = "red")
+
+
+# compute log odds for bins
+MedGPA_binned <- MedGPA_binned %>%
+  mutate(log_odds = log(acceptance_rate / (1 - acceptance_rate)))
+
+# plot binned log odds
+data_space <- ggplot(data = MedGPA_binned, aes(x = mean_GPA, y = log_odds)) + 
+  geom_point() + geom_line()
+
+# compute log odds for observations
+MedGPA_plus <- MedGPA_plus %>%
+  mutate(log_odds_hat = log(.fitted / (1 - .fitted)))
+
+# logistic model on log odds scale
+data_space +
+  geom_line(data = MedGPA_plus, aes(x = GPA, y = log_odds_hat), color = "red")
+
+
+
+#learning from a model
+mod <- glm(is_alive ~ age + transplant,
+           data = heartTr, family = binomial)
+
+ex(coef(mod))
+
+#making probabilstic predictions
+augment(mod, type.predict = "response")
+
+#Out-of-sample predictions
+cheney <- data.frame(age = 71, transparent = "treatment")
+cheney
+augment(mod, nexdata = cheney, type.predict = "response")
+
+#Making binary predictions
+mod_plus <- augment(mod, type.predict = "response") %>%
+  mutate(alive_hat = round(.fitted))
+
+mod_plus %>%
+  select(is_alive, age, transplant, .fitted, alive_hat)
+
+#Confusion matrix
+mod_plus %>%
+  select(is_alive, alive_hat) %%
+  table()
+
+
+# create new data frame
+new_data <- data.frame(GPA = 3.51)
+
+# make predictions
+augment(mod, newdata = new_data, type.predict = "response")
