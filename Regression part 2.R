@@ -393,3 +393,5 @@ p %>%
   add_surface(x = ~x, y = ~y, z = ~plane0, showscale = FALSE) %>%
   add_surface(x = ~x, y = ~y, z = ~plane1, showscale = FALSE)
 
+
+

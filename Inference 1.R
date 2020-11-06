@@ -280,3 +280,206 @@ disc_perm_new %>%
 disc_perm %>%
   summarize(p_value = 2 * mean(diff_orig <= stat))
 
+
+#CH3
+
+# Tabulate the data
+opportunity %>%
+  count(decision, group)
+
+# Find the proportion who bought the DVD in each group
+opportunity %>%
+  group_by(group) %>%
+  summarize(buy_prop = mean(decision == "buyDVD"))
+
+# Plot group, filled by decision
+ggplot(opportunity, aes(x = group, fill = decision)) + 
+  # Add a bar layer, with position "fill"
+  geom_bar(position = "fill")
+
+#The treatment seems to have worked
+
+
+# From previous steps
+diff_obs <- opportunity %>%
+  group_by(group) %>%
+  summarize(prop_buy = mean(decision == "buyDVD")) %>%
+  summarize(stat = diff(prop_buy)) %>% 
+  pull()
+opp_perm <- opportunity %>%
+  specify(decision ~ group, success = "buyDVD") %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in props", order = c("treatment", "control"))
+
+# Using the permuation data, plot stat
+ggplot(opp_perm, aes(x = stat)) + 
+  # Add a histogram layer with binwidth 0.005
+  geom_histogram(binwidth = 0.005) +
+  # Add a vline layer with intercept diff_obs
+  geom_vline(aes(xintercept = diff_obs), color = "red")
+
+# Visualize the statistic 
+opp_perm %>%
+  visualize(obs_stat = diff_orig, direction = "less")
+
+# Calculate the p-value using `get_p_value`
+opp_perm %>%
+  get_p_value(obs_stat = diff_orig, direction = "less")
+
+# Calculate the p-value using `summarize`
+opp_perm %>%
+  summarize(p_value = mean(stat <= diff_orig))
+
+
+
+#Ch4
+#Bootstrap provides an approximation of the standard error
+
+# From previous steps
+ex1_props <- all_polls %>% 
+  group_by(poll) %>% 
+  summarize(stat = mean(vote == "yes"))
+ex2_props <- all_polls %>%
+  filter(poll == 1) %>%
+  select(vote) %>%
+  specify(response = vote, success = "yes") %>%
+  generate(reps = 1000, type = "bootstrap") %>% 
+  calculate(stat = "prop")
+
+# Calculate variability of p-hat
+ex1_props %>% 
+  summarize(variability = sd(stat))
+
+# Calculate variability of p-hat*
+ex2_props %>% 
+  summarize(variability = sd(stat))
+
+# Combine data from both experiments
+both_ex_props <- bind_rows(ex1_props, ex2_props, .id = "experiment")
+
+# Using both_ex_props, plot stat colored by experiment
+ggplot(both_ex_props, aes(stat, color = experiment)) + 
+  # Add a density layer with bandwidth 0.1
+  geom_density(bw = 0.1)
+
+#Resamples with replacement are an excellent model for the process of taking the original sample from the population. Remember, in research problems, you don't have an ability to take more than one original sample, but you can take as many resamples as you like.
+
+
+
+# Proportion of yes votes by poll
+props <- all_polls %>% 
+  group_by(poll) %>% 
+  summarize(prop_yes = mean(vote == "yes"))
+
+# The true population proportion of yes votes
+true_prop_yes <- 0.6
+
+# Proportion of polls within 2SE
+props %>%
+  # Add column: is prop_yes in 2SE of 0.6
+  mutate(is_in_conf_int = abs(prop_yes - true_prop_yes) < 2 * sd(prop_yes)) %>%
+  # Calculate  proportion in conf int
+  summarize(prop_in_conf_int = mean(is_in_conf_int))
+#it looks like 96.6% are within 2 standard errors of the true population parameter.
+
+
+# From previous exercises
+one_poll <- all_polls %>%
+  filter(poll == 1) %>%
+  select(vote)
+
+one_poll_boot <- one_poll %>%
+  specify(response = vote, success = "yes") %>%
+  generate(reps = 1000, type = "bootstrap") %>% 
+  calculate(stat = "prop")
+
+p_hat <- one_poll %>%
+  # Calculate proportion of yes votes
+  summarize(stat = mean(vote == "yes")) %>%
+  pull()
+
+# Create an interval of plausible values
+one_poll_boot %>%
+  summarize(
+    # Lower bound is p_hat minus 2 std errs
+    lower = p_hat - 2 * sd(stat),
+    # Upper bound is p_hat plus 2 std errs
+    upper = p_hat + 2 * sd(stat)
+  )
+
+# From previous step
+percentile_ci <- one_poll_boot %>% 
+  get_confidence_interval(level = 0.95)
+
+one_poll_boot %>% 
+  # Visualize in-between the endpoints given by percentile_ci
+  visualize(endpoints = percentile_ci, direction = "between")
+
+calc_t_conf_int <- function(resampled_dataset) {
+  resampled_dataset %>%
+    summarize(
+      lower = p_hat - 2 * sd(stat),
+      upper = p_hat + 2 * sd(stat)
+    )
+}
+
+# Find the bootstrap t-confidence interval for 30 resamples
+calc_t_conf_int(one_poll_boot)
+
+# ... and for 300 resamples
+calc_t_conf_int(one_poll_boot_300)
+
+# ... and for 3 resamples
+calc_t_conf_int(one_poll_boot_3)
+
+
+calc_p_hat <- function(dataset) {
+  dataset %>%
+    summarize(stat = mean(vote == "yes")) %>%
+    pull()
+}
+calc_t_conf_int <- function(resampled_dataset, p_hat) {
+  resampled_dataset %>%
+    summarize(
+      lower = p_hat - 2 * sd(stat),
+      upper = p_hat + 2 * sd(stat)
+    )
+}
+
+# Find proportion of yes votes from original population
+p_hat <- calc_p_hat(one_poll)
+
+# Review the value
+p_hat  
+
+# Calculate bootstrap t-confidence interval (original 0.6 param)
+calc_t_conf_int(one_poll_boot, p_hat)
+
+# Find proportion of yes votes from new population
+p_hat_0.8 <- calc_p_hat(one_poll_0.8)
+
+# Review the value
+p_hat_0.8  
+
+# Calculate the bootstrap t-confidence interval (new 0.8 param)
+calc_t_conf_int(one_poll_boot_0.8, p_hat_0.8)
+
+
+# Calculate a 95% bootstrap percentile interval
+one_poll_boot %>% 
+  get_confidence_interval(level = 0.95) 
+
+# Calculate a 99% bootstrap percentile interval
+one_poll_boot %>% 
+  get_confidence_interval(level = 0.99) 
+
+# Calculate a 90% bootstrap percentile interval
+one_poll_boot %>% 
+  get_confidence_interval(level = 0.90) 
+
+# Plot ci_endpoints vs. ci_percent to compare the intervals
+ggplot(conf_int_data, aes(ci_percent, ci_endpoints)) +
+  # Add a line layer
+  geom_line()
+
