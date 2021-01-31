@@ -1,6 +1,6 @@
 #Package installation
 
-install.packages("fansi")
+install.packages("tidycensus")
 install.packages("broom")
 install.packages("ggplot2")
 install.packages(c("rstudioapi", "openintro"))
@@ -14,7 +14,9 @@ library(visdat)
 library(broom)
 library(airports)
 
+##Inference for Categorical Data
 library(dplyr)
 library(ggplot2)
-
-
+library(infer)
+library(tigris)
+library(tidycensus)
