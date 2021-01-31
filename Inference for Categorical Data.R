@@ -1,9 +1,8 @@
 ##Inference for Categorical Data
-library(dplyr)
-library(ggplot2)
-library(infer)
 
-#Ch1
+######################
+##########CH1#########
+######################
 
 ##Note: Given GSS dataset does not match the GSS used in the course.
 ##consci should have been binary.
@@ -11,19 +10,23 @@ library(infer)
 # From previous steps
 gss2016 <- gss %>%
   filter(year == 2016)
-
+  
 head(gss2016)
 
-ggplot(gss2016, aes(x = consci)) +
+ggplot(data= subset(gss2016, !is.na(consci)), aes(x = consci)) +
   geom_bar()
+
+
+ggplot(gss2016, aes(x = consci)) +
+  geom_bar(na.rm = TRUE)
+
 # Compute proportion of high conf
-p_hat <- gss2016 %>%
+p_hat <- subset(gss2016, !is.na(consci)) %>%
   summarize(prop_high = mean(consci == "High")) %>%
   pull()
 
-
 # Create single bootstrap data set
-boot1 <- gss2016 %>%
+boot1 <- subset(gss2016, !is.na(consci)) %>%
   # Specify the response
   specify(response = consci, success = "High") %>%
   # Generate one bootstrap replicate
@@ -103,8 +106,89 @@ SE_approx <- sqrt(p_hat * (1 - p_hat) / n)
 c(p_hat - 2 * SE_approx, p_hat + 2 * SE_approx)
 
 
+######################
+##########CH2#########
+######################
 
-##Ch2
+ggplot(gss2016, aes(x = postlife)) +
+  geom_bar()
+
+p_hat <- gss2016 %>%
+  summarize(prop_yes = mean(postlife == "YES")) %>%
+  pull()
+
+p_hat
+
+sim1 <- gss2016 %>%
+  specify(response = postlife, success = "YES") %>%
+  hypothesise(null = "point", p = 0.75) %>%
+  generate(reps = 1, type = "simulate")
+  
+sim1 %>%
+  summarise (prop_yes = mean(postlife == "YES")) %>%
+  pull()
+
+null <- gss2016 %>%
+  specify(response = postlife, success = "YES") %>%
+  hypothesize(null = "point", p = 0.75) %>%
+  generate(reps = 500, type = "simulate") %>%
+  # Calculate proportions
+  calculate(stat = "prop")
+
+null %>%
+  summarize(
+    one_tailed_pval = mean(stat > p_hat),
+    two_tailed_pval = 2 * one_tailed_pval
+  ) %>%
+  pull(two_tailed_pval)
+
+ggplot(null, aes(x=stat)) +
+  geom_density() +
+  geom_vline(xintercept = p_hat, color = "red")
+
+
+ggplot(data = subset(gss2016, !is.na(cappun)), aes(x = sex, fill = cappun)) +
+  geom_bar(position = "fill")
+
+sample1 <- subset(gss2016, !is.na(cappun))
+
+p_hats <- sample1 %>%
+  group_by(sex) %>%
+  summarise(prop_favor = mean(cappun == "FAVOUR")) %>%
+  pull()
+
+p_hats
+d_hat <- diff(p_hats)
+d_hat
+
+# Create null distribution
+null <- gss2016 %>%
+  # specify the response and explanatory as well as the success
+  specify(cappun ~ sex, success = "FAVOR") %>%
+  # set up null hypothesis
+  hypothesize(null = "independence") %>%
+  # generate 500 permuted reps
+  generate(reps = 500, type = "permute") %>%
+  # calculate the statistics
+  calculate(stat = "diff in props", order = c("FEMALE", "MALE"))
+
+ggplot(null, aes(x = stat)) +
+  # Add density layer
+  geom_density() +
+  # Add red vertical line at obs stat
+  geom_vline(xintercept = d_hat, color = "red")
+
+null %>%
+  summarize(
+    one_tailed_pval = mean(stat <= d_hat),
+    two_tailed_pval = 2 * one_tailed_pval
+  ) %>%
+  pull(two_tailed_pval)
+
+
+
+
+
 
 
 ##Ch3
@@ -131,3 +215,4 @@ Obs %>%
   tidy() %>%
   # Expand out the counts
   uncount(n)
+
